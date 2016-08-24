@@ -1,0 +1,188 @@
+#
+# Paczka iproute2
+
+
+# Wypisanie interfejsow
+ip link list
+ip link show eth0
+
+#wlaczenie i wylaaczenie interfejsow
+ip link set eth0 up
+ip link set eth0 down
+
+#ustawianie adresu Mac
+ip link set eth0 address 00:00:00:00:00:00
+
+#zmiana nazwy interfejsow
+ip link set eth0 name lan
+ip link set wlan0 name wan
+
+
+#wypisanie adresow interfejsow
+ip address list
+ip address show lan
+
+#dodanie adresu
+ip address add 10.0.0.1/24 dev lan
+
+#usuniecie adresu
+ip address del 10.0.0.1/24 dev lan
+
+#usuniecie wszystkich adresow
+ip address flush lan
+
+#wypisanie tras
+ip route list
+ip route show 0/0
+
+#dodanie trasy
+ip route add to 10.0.0.0/24 dev lan
+ip route add default via 10.0.0.1
+
+#usuniecie trasy
+ip route delete 0/0
+
+#zapisywanie/odtworzenie trasy
+ip route save > backup
+ip route restore < backup
+
+# forwarding IP
+
+echo 1 > /proc/sy/net/ipv4/ip_forward
+
+# IPTABLES ###########################################
+
+# dodawanie zasad
+iptables [-t table] -A CHAIN specyfikacja-zasady
+iptables [-t table] -I CHAIN [pozycja] specyfikacja-zasady
+
+# usuwanie zasad
+iptables [-t table] -D CHAIN specyfikacja-zasady
+iptables [-t table] -D pozycja
+
+# listowanie zasad
+iptables [-t table] -vL [CHAIN]
+
+# specyfikacja zasady
+kryteria -j TARGET opcje-targetu
+
+
+# Targety
+# ACCEPT - przepuszcza target
+# DROP - Nie przepuszcza i nic z nim nie robi
+# REJECT - Nie przepuszcza i wysyła błąd
+
+# Kryteria
+# -i ethN - pakiet przychodzi z interfejsu ethN
+# -o ethN - pakiet wychodzi z interfejsu ethN
+# -s 1.2.3.4 - pakiet przychodzi z adresu 1.2.3.4
+# -d 1.2.3.4 - pakiet wychodzi do adresu 1.2.3.4
+# -p tcp protokól tcp (moze byc tez icmp, udp itd)
+# -sport 23 - pakiet przychodzi z portu 23
+# -dport 23 - pakiet wychodzi na port 23 
+
+# Iptables pozwala sledzic polaczenia i zmiejszac ilosc sprawdzanych regolek
+# dla ustanowionych polacze. Robi to moduł conntrack
+
+iptables -A INPUT -m conntrack --ctstate STAN -j TARGET
+
+# Mozliwe stany pakietu
+# NEW - pakiet ustanawia nowe polaczenie
+# ESTABLISHED - pakiet nalezy do ustanowionego polaczenia
+# RELATED - pakiet jest powiazany z ustanowionym polaczeniem
+# INVALID - pakiet nie nalezy do zadnego znanego polaczenia
+
+# przyklad
+iptables -A INPUT -m conntrack --ctstate ESTABLISHED,RELATED -j ACCEPT
+
+
+# szukanie stringu w pakiecie
+# Ogólnie -m string --algo bm [--icase] [--from n] [--to n] --[hex]string "string do wyszukania"
+
+# Przyklady
+iptables -A INPUT -j DROP -m string --algo bm -p tcp --dport 80 ...
+	--icase --string "x-requested-with"
+	--icase --string "content-type: image/"
+	--icase --string "content-type: application/x-shockwave-flash"
+
+
+# Ustawianie TTL czyli jak utrudnic userom stawianie/podlaczanie routerow
+iptables -t mangle - A FORWARD -o lan -j TTL --ttl-set 1
+
+# omijanie poprzedniej blokady :-)
+iptables -t mangle -A FORWARD -o lan -j TTL --ttl-int 1		# ttl-int incrementuje 
+
+# Piec obrazkow na minute
+iptables -A FORWARD -i lan -p tcp --dport 80 	\
+-m conntrack --ctstate NEW			\
+-m string --algo bm --icase			\
+	  --string "Content-Type: image/"	\
+-m recent --set
+
+iptables -A FORWARD -i lan -j DROP -p tcp --dport 80	\
+-m conntrack --ctstate NEW				\
+-m string --algo bm --icase				\
+	  --string "Content-Type: image/"		\
+-m resent --update --seconds 60 --hitcount 6
+
+# maskarada
+iptables -t nat -A POSTROUTING -o wan -j MASQUERADE
+
+# NAT bez MASQUERADE
+iptables -t nat -A POSTROUTING -o wan -j SNAT --to-source 10.0.0.5
+
+# Przekierowanie portow np z 10.0.0.5:8080 na 192.168.1.23:80
+iptables -t nat -A PREROUTING -p tcp --dport 8080 --to 10.0.0.5 -j DNAT --to-destination 192.168.1.23:80
+
+# Serwer DHCP - dnsmasq
+# konfiguracja - /etc/dnsmasq.conf
+dhcp-range=192.168.1.100,192.168.1.105  # przydzielanie 6 adresow od 100 do 105
+
+# skladnia
+dhcp-range=[<interface>,]<start-addr>,<end-addr>[,<netmask>[,<broadcast>]][,<lease-time>
+
+# Działanie tylko na jednym interfejsie
+interface=lan
+bind-interfaces
+
+# statyczne dzierzawy w innej podsieci
+dhcp-range=192.168.2.1,static				# adres naszego routera
+dhcp-host=d3:4d:b3:3f:23:42,192.168.2.2,infinite
+dhcp-host=hostname,192.168.2.3,infinite
+
+
+# skoro mamy juz postawiony serwer dhcp to mozemy dalej kontynlowac konfiguracje udostepnienia polaczenia 
+
+# najpierw adresy ip
+ip address add 192.168.1.1/24 dev lan	# siec dla dhcp zmiennego
+ip address add 192.168.2.1/24 dev lan	# siec dla stalych adresow ip
+
+# a nastepnie sam interface
+ip link set lan up
+
+# Mostki czyli �polaczenie interfejsow tak aby zachowywaly sie jak jeden
+brctl addbr br0
+brctl addif br0 lan
+brctl addif br0 tap0
+
+ip address flush lan
+ip link set lan proisc on
+ip link set tap0 promisc on
+
+ip address add 192.168.1.1/24 dev br0
+ip address add 192.168.2.1/24 dev br0
+
+
+# pelny skrypt pozwalajacy udostepnic polaczenie wifi na eht0
+
+ip address set lan 192.168.1.1/24
+ip link set lan up
+iptables - t nat - A POSTROUTING -o wan -j MASQUERADE
+echo 1 > /proc/sys/net/ipv4/ip_forward
+echo "dhcp-range=192.168.1.100,192.168.1.200" >> /etc/dnsmasq.conf
+service dnsmasq start
+
+# koniec 
+
+
+
