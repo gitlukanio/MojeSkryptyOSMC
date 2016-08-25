@@ -228,7 +228,7 @@ service dnsmasq start
 
 host -t a www.facebook.com
 whois 31.13.65.17 | grep inetnum    # daje wynik inetnum  31.13.64.0 - 31.13.127.255 
-
+# Majac zakres adresow ip jakie posiada facebook mozna dodac regole blokujaca wszystkie z nich
 -A OUTPUT -p tcp -i eth0 -o eth1 -d 31.13.64.0/18 -j DROP
 
 # Odblokowany dostep do facebooka pomiedzy 12:00 a 13:00
