@@ -1,4 +1,4 @@
-#
+####################### Z prezentacji na 8 sesji linuxowej ###################################
 # Paczka iproute2
 
 
