@@ -256,4 +256,12 @@ watch --interval=5 `iptables -nvL | grep -v "0     0"`
 # note that the spacing on greep command is important "5 spaces between 0"
 
 
+# Logowanie odrzuconych pakietow w /var/log/messages
+
+iptables -N LOGGING
+iptables -A INPUT -j LOGGING
+iptables -A LOGGING -m limit --limit 2/min -j LOG --log-prefix "IPTables-Dropped: " --log-level 4
+iptables -A LOGGING -j DROP
+
+
 
