@@ -56,6 +56,13 @@ echo 1 > /proc/sy/net/ipv4/ip_forward
 iptables [-t table] -A CHAIN specyfikacja-zasady
 iptables [-t table] -I CHAIN [pozycja] specyfikacja-zasady
 
+# Dodawanie defaultowych zasad
+iptables -P INPUT DROP
+iptables -P OUTPUT DROP
+iptables -P FORWARD DROP
+
+
+
 # usuwanie zasad
 iptables [-t table] -D CHAIN specyfikacja-zasady
 iptables [-t table] -D pozycja
