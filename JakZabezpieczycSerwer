@@ -1,0 +1,206 @@
+
+ * Wstęp
+
+Poradnik ten przeznaczony jest dla bardzo początkujących użytkowników (nawet zupełnych lamerów) systemu Linux, którzy chcieliby zająć się tematem bezpieczeństwa swojego serwera, zanim zrobi to za nich ktoś inny…
+
+ * Stawiając serwer do zabawy i nauki, możesz zdecydować się na absolutnie dowolną dystrybucję.
+
+Wybierając jednak OS do zastosowań produkcyjnych, warto zdecydować się na dystrybucję po pierwsze sprawdzoną, po drugie, często aktualizowaną.
+
+Do najpopularniejszych (darmowych) należą:
+
+    Ubuntu
+    CentOS
+    Debian
+
+    Fakt, że producent często aktualizuje system, nie podnosi Twojego bezpieczeństwa, jeśli… Ty regularnie nie ściągasz tych nowych aktualizacji ;)
+
+ * Logowanie na serwer
+
+Mówi się, abyś hasła traktował jak majtki:
+
+    zmieniaj je często,
+    nie pożyczaj znajomym,
+    nie zostawiaj na widoku.
+
+W większości przypadków zgadzam się z tym podejściem, ale w świecie serwerów, poszedłem o krok dalej…
+
+ * Zapomnij o hasłach!
+
+Korzytając z prorotkołu SSH, możesz w pełni przerzucić się na logowania za pomocą kluczy SSH.
+
+W ten sposób, nawet jeśli logowałbyś się do serwera np. z komputera z fizycznym/softwarowym keyloggerem, niemożliwe stanie się przechwycenie hasła, ponieważ… nie używasz żadnego.
+
+Dodatkowo niemal niemożliwe staje się przeprowadzenie typowego ataku bruteforce (próba logowania z wykorzystaniem haseł słownikowych i/lub haseł generowanych kolejno: aaa, aab, aac itd.)
+
+    Dla zwiększenia bezpieczeństwa, możesz zdefiniować hasło dla swojego klucza SSH. Da Ci to dodatkową warstwę ochrony, na wypadek wycieku klucza.
+
+ * Hasło awaryjne
+
+Każdy admin, który kiedykolwiek doświadczył poważnej usterki serwera i musiał na nim interweniować poprzez konsolę wirtualną, fizyczny terminal lub KVM, wie, że brak możliwości zalogowania się zwykłym hasłem to jeden z najgorszych spowalniaczy pracy, jaki może się przytrafić.
+
+Z tego względu warto mieć coś, co ja nazywam “hasłem awaryjnym”.
+
+    Hasło awaryjne przechowywane jest w bezpiecznym miejscu, niekoniecznie w Twojej głowie.
+
+ * Logowanie awaryjne (przez konsole)
+
+    Ustaw długie, trudne do złamania hasło dla użytkownika ROOT (może to być np. zlepek 5–6 zupełnie losowych słów).
+    Zapisz hasło w bezpiecznym miejscu (menadżer haseł, zaszyfrowany plik na dysku, pendrive w sejfie — cokolwiek).
+    Nie próbuj nawet zapamiętać tego hasła.
+    Ustaw w SSH możliwość logowania jedynie za pomocą kluczy
+    Nadal będzie dało się zalogować do serwera hasłem poprzez konsolę awaryjną (czy to KVM czy fizyczną), ale nie przez protokół SSH.
+
+ * Tylko szyfrowane protokoły!
+
+Zrezygnuj z używania protokołu FTP. Nawet jeśli na Twoim serwerze są konta mniej technicznych użytkowników, naucz ich korzystania z dowolnej, alternatywnej metody przesyłania plików.
+
+    SCP
+    SFTP
+    RSYNC
+
+FTP przesyła hasła czystym tekstem, więc ich przechwycenie jest dziecinnie proste.
+
+ * Konfiguracja firewalla
+
+Podstawowa zasada rozpoczynania konfiguracji firewalla, to:
+
+    Stosuj whitelisty, a nie blacklisty.
+
+Czyli domyślnie, wszystko ustawione jest na DROP (ruch przychodzący i wychodzący), a później w miarę stawiania nowych usług, otwierasz dodatkowe porty komunikacyjne.
+
+Jeśli Twój serwer nie posiada usługi WWW, ruch przychodzący na portach 80 i 443 nie będzie dla niego czymś oczekiwanym. Możesz więc to wyciąć.
+
+Skorzystaj z poradników (i/lub skryptów) do konfiguracji podstawowego firewalla. Pamiętaj także, aby nie zrobić podstawowego błędu początkującego admina i nie doprowadzić do odcięcia siebie samego od konfigurowanej właśnie maszyny.
+
+ * Niestandardowy port SSH
+
+Wiele zautomatyzowanych ataków sieciowych, wycelowane jest w port numer 22. Robot sprawdza, czy port jest otwarty i czy słucha tam SSH, po czym zwykle przystępuje do sprawdzania domyślnych haseł logowania (typowy atak słownikowy).
+
+Zmieniając port na dowolny wysoki (1024+) zmniejszasz ryzyko ataku przez automaty (przynajmniej niektóre).
+
+Zmiana numeru portu czasami może generować problemy. Jeśli na jakiś natrafisz, możesz pozostać przy domyślnym numerze portu i skorzystać z następnej porady.
+
+ * Ograniczenie dostępu do SSH
+
+Prawdopodobnie wiesz z jakich teoretycznych lokalizacji możesz logować się na swój serwer. Przeważnie jest to praca, dom, uczelnia itp.
+
+Każde z tych miejsc wychodzi na świat z określonej puli IP (adres bywa zmienny, jednak pula jest zazwyczaj stała).
+
+Możesz ograniczyć na firewallu dostęp do portu SSH, jedynie z określonego zakresu IP.
+
+Zakres ten może być nawet skrajnie szeroki (maski IP rzędu /24, /16 czy niekiedy /8).
+
+ * Awaryjny dostęp do SSH
+
+Niekiedy musisz zalogować się na serwer z niestandardowej lokalizacji, dla której nie otworzyłeś dostępów na firewallu (np. łącząc się z WiFi w kawiarni).
+
+W takich przypadkach, używam serwera zwanego przeze mnie ‘jumpboxem’. Jest to dowolny, zaufany serwer (lub grupa serwerów) do którego mam dostęp, a którego adres(y) IP są wpisane w regułach firewalla, które przygotowywałem.
+
+Na co dzień nie korzystam z tego serwera do logowania się, ale w wyjątkowych sytuacjach, może on być dla mnie ostatnią deską ratunku.
+
+    Zadbaj o to, aby w Twojej regule firewalla, zapewniony był dostęp z minimum jednej maszyny ze stałym adresem IP, do której będziesz miał stały dostęp przez sieć (np. jakiś malutki VPS). Zadbaj oczywiście o bezpieczeństwo tej maszyny ;)
+
+ * Wycinanie atakujących
+
+Osoba (lub automat), która dziesiątki razy próbuje bezskutecznie zalogować się na Twój serwer, to prawdopodobnie nic dobrego.
+
+Warto więc automatycznie odcinać dostęp takim intruzom.
+
+Najprostsza metoda, to instalacja pakietu fail2ban. Domyślna konfiguracja powinna wystarczyć do ochrony logowania przez SSH.
+
+Możesz także rozbudować domyślny config tak, aby szukał śladów ataków bruteforce, także w logach innych usług.
+
+ * Montowanie partycji
+
+Rozważ możliwość trzymania kluczowych katalogów systemowych (/home/, /var/log/, /var/tmp/, /tmp/ itp) na oddzielnych partycjach. Najlepiej wykorzystaj LVM, aby uniknąć problemów z rozmiarem wolumenu.
+
+Podmontuj wyżej wymienione katalogi z opcjami nosuid + nodev.
+
+Polecanym rozwiązaniem jest też ustawienie tzw. sticky bit na /tmp/ (chmod o+t /tmp/).
+
+Radykalni admini sugerują dodanie opcji noexec na katalogi tymczasowe (/tmp/ i /var/tmp/), ale z doświadczenia wiem, że niekiedy powoduje to problemy, więc sam tego unikam.
+
+ * Partycje w trybie read-only
+
+Niektóre z systemów specjalnego przeznaczenia, zbudowane są tak, że zaledwie niewielka ich część ulega zmianie.
+
+Przykładowo, niektórzy admini deydują się na montowanie w trybie tylko-do-odczytu katalogów takich jak:
+
+/etc/
+/usr/
+/lib/
+/boot/
+
+Powyższe katalogi przeważnie nie powinny być nigdy aktualizowane przez użytkowników, a ich zawartość ulega zmianie jedynie podczas rekonfiguracji serwera (co nie zdarza się na produkcji za często) lub podczas aktualizacji systemu. W obu przypadkach, administrator może przed przystąpieniem do pracy, przemontować zasoby RO w tryb RW.
+
+Takie rozwiązanie utrudnia potencjalnemu włamywaczowi (który dostał się do systemu, ale nie zdobył roota) na wprowadzanie istotnych zmian w systemie, czy na ukrywanie złośliwego oprogramowania w czeluściach dysku.
+
+Temat używania partycji read-only ma swoich zwolenników, jak i przeciwników, więc decyzja o wyborze takiego rozwiązania powinna być dostosowana do specyfiki użycia konkretnego serwera.
+
+ * Chrooty i kontenery
+
+Jeśli to możliwe, uruchamiaj poszczególne usługi w oddzielnych kontenerach (np. docker czy OpenVZ) lub przynajmniej w chrootowanym środowisku.
+
+Takie rozwiązanie dołoży Ci nieco pracy na początku, jednak zarządzanie takim środowiskiem i debugowanie ewentualnych problemów z usługami będzie później prostsze.
+
+Dodatkowo, zyskujesz kolejną warstwę zabezpieczeń. W razie włamania do którejkolwiek z usług, agresor dostaje się jedynie do odizolowanego kontenera, a nie do całej maszyny, przez co pozostałe usługi nadal są bezpieczne.
+
+ * Otwarte porty publiczne
+
+Wiele usług sieciowych, domyślnie nasłuchuje na wszystkich dostępnych adresach IP serwera (0.0.0.0).
+
+Nie zawsze jest to dobre rozwiązanie, ponieważ nie wszystkie usługi chcemy wystawiać na świat.
+
+Jeśli wykorzystujesz np. serwer baz danych, czy memcache tylko lokalnie, to ustaw bindowanie portu usługi na 127.0.0.1.
+
+Jeśli już musisz otworzyć port dla połączeń zewnętrznych, to przynajmniej zdefiniuj na firewallu jakieś ograniczenia tego, skąd użytkownicy mogą się do niego łączyć (zakładam np., że ze zdalnego serwera baz danych, korzysta ograniczona pula adresów IP).
+
+    Powyższa zasada oczywiście nie dotyczy serwerów, które z definicji powinny być dostępne dla każdego (np. serwer stron WWW).
+
+ * Ukrywania wersji oprogramowania
+
+Jeśli to możliwe, spraw, aby poszczególne usługi działające na Twoim serwerze nie zdradzały wersji oprogramowania, które je obsługuje.
+
+Dotyczy to przede wszystkim usług wystawionych na świat, a więc zwróć uwagę na serwer WWW, obsługę PHP, czy wersję uruchamianych aplikacji webowych.
+
+Automatyczne ataki często skierowane są na konkretną wersję oprogramowania i dla zaoszczędzenia czasu pomijają te serwery, dla których wersja ta nie jest zgodna z wersją exploita.
+
+Brak prezentacji np. wersji Apache, może zaoszczędzić Ci kilku dodatkowych prób ataku miesięcznie.
+
+    nie każdy program umożliwia ukrycie swojej wersji. Niekiedy będzie to wymagało przekompilowania źródeł (jak np. w przypadku nginx).
+
+ * Backup logów
+
+Przyjęło się, że backupujemy głównie dane użytkowników, a logi po prostu rotujemy dla oszczędności miejsca na dysku.
+
+Niestety, włamywacze często pozostają ukryci w systemie nawet tygodniami od daty włamania, zanim wykonają swój pierwszy krok.
+
+Posiadając jedynie logi z ostatnich 4–5 dni, nie będziesz w stanie namierzyć źródła ataku, ani metody jaką posłużył się atakujący.
+
+Dobrym zwyczajem jest okresowe wysyłanie zrotowanych logów na zdalny serwer, lub nawet logowanie niektórych zdarzeń na dwa serwery jednocześnie (lokalny i zdalny).
+
+ * Poprawny backup
+
+Zapamiętaj:
+
+    replika bazy danych to NIE jest backup
+    RAID to NIE jest backup
+    snapshot LVM to NIE jest backup (to rozwiązanie, które może być użyte jako podręczny backup, ale nie jako backup persystentny)
+    jeden punkt backupowy w czasie, to kiepski backup (trzymaj np. backupy z ostatnich 3 dni + jeden sprzed tygodnia + jeden sprzed miesiąca)
+
+    Zadbaj o to, aby Twój backup był konsystentny (kopiując pliki, użyteczny może być tutaj snapshot LVM, który ‘zamrozi’ na chwilę obraz partycji) — zwłaszcza w przypadku backupowania baz danych. Kopie baz wykonuj zawsze z użyciem oprogramowania dedykowanego do backupowania konkretnego silnika DB.
+
+ * Koniec
+
+Mam nadzieję, że wiedza zdobyta w tym poradniku zostanie przez Ciebie wprowadzona w życie i podniesie ogólne bezpieczeństwo Twoich serwerów.
+
+Pamiętaj, że zaprezentowane tutaj porady to absolutne podstawy. Tematyka zabezpieczania serwerów linuksowych jest bardzo szeroka i nie da się jej zawrzeć w jednym, krótkim artykule.
+
+    Jeśli tekst Ci się spodobał, kliknij 💚 na dole (jeśli masz konto na Medium) i/lub udostępnij ten poradnik na Twitterze/Facebooku.
+
+Kontakt z autorem
+
+jakub@mrugalski.pl
+fb.me/jakub.mrugalski
+
